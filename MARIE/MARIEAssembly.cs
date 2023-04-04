@@ -296,7 +296,7 @@ namespace Registers
             return $"MAR({GetValue()})";
         }
     }
-    class M : IMicroCodeObject//memory
+    class M : IMicroCodeObject //memory
     {
         private IMicroCodeObject microCodeObject;
 
