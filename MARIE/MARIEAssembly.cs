@@ -150,7 +150,7 @@ namespace Registers
     {
 
     }
-    class M : IMicroCodeObject//memory
+    class M : IMicroCodeObject //memory
     {
         public M(string val) { }
     }
