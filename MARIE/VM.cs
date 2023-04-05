@@ -63,7 +63,7 @@ namespace MARIE
                     curOp(this.CPU);
                 }
 
-                Dictionary<string, MicroCodeOp> Ops = new()
+                Dictionary<string, MicroCodeOp> QuickOps = new()
                 {
                     { "ADD", (c) => {
                         c.AC += c.m[c.ip];
@@ -110,18 +110,44 @@ namespace MARIE
                         }
                     },
                     { "JNS", (c) => { c.m[c.ip] = c.PC; c.PC = c.m[c.ip] + _ins_len; } },
-                    { "JUMPL", (c) => { c.PC = c.m[c.m[c.ip]]; } },
-                    { "STOREL", (c) => { c.m[c.m[c.ip]] = c.AC; } },
+                    { "JUMPL", (c) => { 
+                        c.PC = c.m[c.m[c.ip]];
+                    } },
+                    { "STOREL", (c) => { 
+                        c.m[c.m[c.ip]] = c.AC;
+                    } },
                     { "LOADL", (c) => { c.AC = c.m[c.m[c.ip]]; } },
                     { "HALT", (c) => {
                         throw new HaltException();
                     } },
+                    {"LOADR",(c) => {
+                        switch (c.ip)
+                            {
+                            case (int)RegisterNames.MBR:
+                                c.AC = c.MBR;
+                                break;
+
+                            case (int)RegisterNames.MAR:
+                                c.AC = c.MAR;
+                                break;
+
+                            case (int)RegisterNames.IR:
+                                c.AC = c.IR;
+                                break;
+
+                            case (int)RegisterNames.PC:
+                                c.AC = c.PC;
+                                break;
+                                 
+                            default: throw new Exception("Unrecognized register name");
+                            }
+                    } }
                 };
 
                 public void SetOp(string opName)
                 {
-                    if (Ops.ContainsKey(opName))
-                        this.curOp = Ops[opName];
+                    if (QuickOps.ContainsKey(opName))
+                        this.curOp = QuickOps[opName];
                     else throw new Exception("Op Not Exist");
                 }
 
@@ -145,7 +171,7 @@ namespace MARIE
             {
                 string ins_name = ASMLib.asm_to_str[(IR >> 28) & 0b1111];
                 string ins_param = Map_val_to_name(IR & 0b0000_1111_1111_1111_1111_1111_1111_1111);
-                return $"PC@{PC:d4}\tAC={AC}\t\tMAR={MAR}\tMBR={MBR}\tIR=0x{IR:x8} [{ins_name} {ins_param}]";
+                return $"PC@{PC:d4}\tAC={AC}\t\tIR=0x{IR:x8} [{ins_name} {ins_param}]";
             }
             Dictionary<int, string> symbol_map;
             private string Map_val_to_name(int addr)
@@ -164,8 +190,8 @@ namespace MARIE
         public class MEM
         {
             private static readonly int _Lower_ = 0;
-            private static readonly int _Higher_ = 2048;
-            private static readonly int _LO_MEM_SIZE_ = 1024;
+            private static readonly int _Higher_ = 131072;
+            private static readonly int _LO_MEM_SIZE_ = 65536;
             int[] _lo_mem = new int[_LO_MEM_SIZE_];
             Dictionary<int, int> _hi_mem = new();
             public int this[int index]
@@ -242,7 +268,7 @@ namespace MARIE
 
         void PrintStatics()
         {
-            Console.WriteLine($"\n\nCPU Cycles: {cpu.CPU_Cycles}\n"+
+            Console.WriteLine($"\n\nCPU Cycles: {cpu.CPU_Cycles}\n" +
                               $"Time Elapsed {sw.ElapsedMilliseconds}ms");
         }
         public void mount(List<MARIEAssembly.ASM> asms, int mem_idx)
@@ -299,6 +325,7 @@ namespace MARIE
                               //e.g.StoreI addresspointer
                               //Gets value from addresspointer,
                               //stores the AC value into the address
+            { "LOADR", 0xF }, //Load register value.
         };
         public static Dictionary<int, string> asm_to_str = Reverse(str_to_asm);
 
@@ -354,14 +381,26 @@ namespace MARIE
         LOAD,
         STORE,
         ADD,
+        ADDL,
         SKIPCOND,
         JUMP,
         HALT,
         OUTPUT,
         SUBT,
+        STOREL,
+        LOADL,
+        LOADR,
+        JUMPL,
     }
 
-
+    public enum RegisterNames
+    {
+        MAR,
+        MBR,
+        AC,
+        IR,
+        PC
+    }
 
     class ASMComposer
     {
